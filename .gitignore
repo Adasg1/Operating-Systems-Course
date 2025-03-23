@@ -1,1 +1,34 @@
 .vscode/
+
+# Pliki binarne i skompilowane
+*.o
+*.out
+*.a
+*.so
+*.exe
+
+# Pliki tymczasowe
+*.swp
+*.swo
+
+# Pliki generowane przez kompilator
+*.d
+*.obj
+*.elf
+
+# Pliki katalogu build
+/build/
+/bin/
+/obj/
+
+# Pliki logów
+*.log
+
+# Pliki tymczasowe edytorów
+*~
+*.bak
+
+# Pliki tarball (archiwa)
+*.tar
+*.tar.gz
+*.tgz
