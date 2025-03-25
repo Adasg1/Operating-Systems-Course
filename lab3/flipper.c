@@ -11,19 +11,23 @@
 #define PATH_MAX 4096
 #endif
 
-// Funkcja do obliczania sumy kontrolnej (prostej sumy bajtów)
-unsigned long calculate_checksum(FILE *file) {
+unsigned long calculate_checksum(int fd) {            //liczenie sumy kontrolnej
     unsigned long sum = 0;
-    int ch;
-    rewind(file); // Przewiń plik na początek
-    while ((ch = fgetc(file)) != EOF) {
-        sum += (unsigned char)ch;
+    unsigned char buffer[1024];
+    ssize_t bytes_read;
+
+    lseek(fd, 0, SEEK_SET);
+
+    while ((bytes_read = read(fd, buffer, sizeof(buffer))) > 0) {
+        for (ssize_t i = 0; i < bytes_read; i++) {
+            sum += buffer[i];
+        }
     }
+
     return sum;
 }
 
-// Funkcja do odwracania linii
-void reverse_line(char *line, int length, FILE *output) {
+void reverse_line(char *line, int length, FILE *output) {      //odwracanie linii
     int start = (line[length - 1] == '\n') ? length - 2 : length - 1;
     for (int i = start; i >= 0; i--) {
         fputc(line[i], output);
@@ -33,20 +37,20 @@ void reverse_line(char *line, int length, FILE *output) {
 
 int main(int argc, char *argv[]) {
     if (argc != 3) {
-        fprintf(stderr, "Nieprawidlowa ilosc argumentow!\n");
+        printf("Nieprawidlowa ilosc argumentow!\n");
         return 22;
     }
 
     DIR *source = opendir(argv[1]);
     if (!source) {
-        perror("Nie udalo sie otworzyc folderu zrodlowego");
+        printf("Nie udalo sie otworzyc folderu zrodlowego");
         return 1;
     }
 
     mkdir(argv[2], S_IRWXU | S_IRGRP | S_IROTH);
     DIR *destination = opendir(argv[2]);
     if (!destination) {
-        perror("Nie udalo sie otworzyc folderu docelowego");
+        printf("Nie udalo sie otworzyc folderu docelowego");
         closedir(source);
         return 1;
     }
@@ -67,53 +71,47 @@ int main(int argc, char *argv[]) {
         FILE *destination_file = fopen(path_to_output, "w");
 
         if (!source_file || !destination_file) {
-            perror("Blad w otwarciu pliku");
+            printf("Blad w otwarciu pliku");
             if (source_file) fclose(source_file);
             if (destination_file) fclose(destination_file);
             continue;
         }
 
-        // Oblicz sumę kontrolną przed odwróceniem
-        unsigned long checksum_before = calculate_checksum(source_file);
-        printf("Suma kontrolna przed odwroceniem (%s): %lu\n", current_file->d_name, checksum_before);
+        unsigned long checksum_before = calculate_checksum(fileno(source_file)); //suma kontrolna przed odwroceniem
+        printf("\nSuma kontrolna przed odwroceniem (%s): %lu\n", current_file->d_name, checksum_before);
 
-        // Odwróć plik
-        rewind(source_file); // Przewiń plik źródłowy na początek przed odwróceniem
+        rewind(source_file);  //wskaznik pliku na poczatek i odwracamy
         while (getline(&line, &length, source_file) != -1) {
             reverse_line(line, (int)strlen(line), destination_file);
         }
 
-        // Zamknij plik docelowy, aby zapisać dane na dysk
-        fclose(destination_file);
+        fclose(destination_file); //zamykanie pliku żeby zapisać dane na dysk
 
-        // Otwórz plik docelowy ponownie do odczytu
-        destination_file = fopen(path_to_output, "r");
+        destination_file = fopen(path_to_output, "r"); //ponowne otwarcie
         if (!destination_file) {
-            perror("Blad w otwarciu pliku docelowego do weryfikacji");
+            printf("Blad w ponownym otwarciu pliku docelowego");
             fclose(source_file);
             continue;
         }
 
-        // Oblicz sumę kontrolną po odwróceniu
-        unsigned long checksum_after = calculate_checksum(destination_file);
-        printf("Suma kontrolna po odwroceniu (%s): %lu\n", current_file->d_name, checksum_after);
+        unsigned long checksum_after = calculate_checksum(fileno(destination_file)); //suma kontrolna po odwroceniu
+        printf("Suma kontrolna po odwroceniu (%s):     %lu\n", current_file->d_name, checksum_after);
 
-        // Sprawdź, czy sumy kontrolne są równe
         if (checksum_before == checksum_after) {
-            printf("Sumy kontrolne sa identyczne. Dane nie zostaly utracone.\n");
+            printf("Sumy kontrolne identyczne - dane nie zostaly utracone.\n");
         } else {
-            printf("Sumy kontrolne roznia sie. Wystapil blad podczas przetwarzania.\n");
+            printf("Sumy kontrolne roznia sie - wystapil blad.\n");
         }
 
         fclose(source_file);
         fclose(destination_file);
     }
 
-    free(line);
+    free(line);  //zwolnij pamięć przydzieloną przez getline
     closedir(source);
     closedir(destination);
 
-    printf("\nUzyj polecenia md5sum, aby sprawdzic integralnosc danych:\n");
+    printf("\nDo sprawdzenia integralnosci danych:\n");   //suma kontrolna MD5
     printf("md5sum %s/*.txt %s/*.txt\n", argv[1], argv[2]);
     return 0;
 }
