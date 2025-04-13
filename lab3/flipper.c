@@ -14,16 +14,15 @@
 unsigned long calculate_checksum(int fd) {            //liczenie sumy kontrolnej
     unsigned long sum = 0;
     unsigned char buffer[1024];
-    ssize_t bytes_read;
+    size_t bytes_read;
 
     lseek(fd, 0, SEEK_SET);
 
     while ((bytes_read = read(fd, buffer, sizeof(buffer))) > 0) {
-        for (ssize_t i = 0; i < bytes_read; i++) {
+        for (size_t i = 0; i < bytes_read; i++) {
             sum += buffer[i];
         }
     }
-
     return sum;
 }
 
@@ -37,7 +36,7 @@ void reverse_line(char *line, int length, FILE *output) {      //odwracanie lini
 
 int main(int argc, char *argv[]) {
     if (argc != 3) {
-        printf("Nieprawidlowa ilosc argumentow!\n");
+        printf("Nieprawidlowa ilosc argumentow\n");
         return 22;
     }
 

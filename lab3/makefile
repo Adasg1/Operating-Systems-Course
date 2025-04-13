@@ -14,7 +14,7 @@ run :
 .PHONY: run-double
 run-double :
 	make flipper
-	./flipper ./art ./flipped_art         # Pierwsze odwrócenie
+	./flipper ./art ./flipped_art
 	./flipper ./flipped_art ./restored_art # Drugie odwrócenie
 
 flipper : flipper.c
